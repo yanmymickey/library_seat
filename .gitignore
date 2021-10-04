@@ -1,0 +1,3 @@
+conf/*
+!conf/default.ini
+get_classroom.py
