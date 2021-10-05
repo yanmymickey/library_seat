@@ -1,3 +1,6 @@
 conf/*
+log/
 !conf/default.ini
 get_classroom.py
+test.py
+test.sh

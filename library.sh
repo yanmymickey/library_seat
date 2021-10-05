@@ -6,7 +6,7 @@ for filename in $files
 do
    filename_noext=${filename%.*}
    echo $filename_noext
-   nohup  python3 library.py --conf "$path$filename" > library_"$filename_noext".log 2>&1 &
+   nohup  python3 library.py --conf "$path$filename" > log/library_"$filename_noext".log 2>&1 &
 done
 
 #nohup python3 library_zmr.py> library_zmr.log 2>&1 &
