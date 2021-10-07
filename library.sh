@@ -1,5 +1,6 @@
 #!/bin/bash
 library_path=$(cd `dirname $0`;pwd)
+cd $library_path
 path='conf/'
 files=$(ls $path)
 for filename in $files

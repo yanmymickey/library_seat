@@ -26,8 +26,11 @@ from os import path, makedirs
     抢座的位置:seat=1,2,3,4,5                (要占座的位置列表,随便写几个自己喜欢的) 
     抢座要不要随机:seat_random=True           (True就每天随机,从自己的填的座位里面优先抢,理论上可以达到每天换着坐的目的,否则就否则) 
     抢座提前的秒数:prems=0.1                  (可以自己尝试改,不改也挺好用) 
-    抢座的微信通知key:ftkey=                  (没有就自己去https://sc.ftqq.com注册一个叭,不想每天收到通知提醒一下自己不香吗?) 
+    抢座通知配置:user_id=                     (推送消息发送user_id)
+    抢座通知配置:appid=1                      (企业微信的appid)
+    抢座通知配置:token=                       (调用接口用的access_token)
 4.仅供学习和交流,禁止私自牟利
+建立log目录用于存放日志
 5.脚本运行是运行library.sh
 6.配置一个每天7点20的crontab定时任务,挂服务器上就大功告成了
 7.考研人加油叭
@@ -41,10 +44,14 @@ lib = 'lib'
 seat = 'seat'
 seat_random = 'random'
 prems = 'prems'
-ftkey = 'ftkey'
 user = 'user'
-# 通知url
-FTkey = None  # your-FTkey
+app_id = 'app_id'
+token = 'token'
+user_id = 'user_id'
+# 通知配置
+touser = "@all"
+agentId = None
+access_token = None
 # 抓湘大校园的包,提取链接类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=
 url_login_url = None
 # 要占座的座位列表
@@ -58,7 +65,6 @@ ran = False
 # 用户名称
 user_name = 'test'
 # 通知的api接口
-FT = "https://sc.ftqq.com/%s.send"
 # 默认的抢座列表
 default_seat = {"南204中文图书借阅一厅(2楼)": [1, 2, 3, 4, 5, 6, 7, 8]}
 # 抢座链接 根据lib_id YsjhY856两个参数确定座位
@@ -145,26 +151,31 @@ def write_log(content):
     log_path = 'log/'
     if not path.exists(log_path):
         makedirs(log_path)
-    with open(log_path+'library.log', 'a+', encoding='utf-8') as log_file:
+    with open(log_path + 'library.log', 'a+', encoding='utf-8') as log_file:
         log_file.seek(0, 0)
         log_file.write(content)
 
 
 # 微信通知
 def notify_wechat(text, desp):
-    # code 短信 电话通知选座成功
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36'
+    send_msg_url = f'https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}'
+    data = {
+        "touser": touser,
+        "agentid": agentId,
+        "msgtype": "textcard",
+        "textcard": {
+            "title": user_name + " " + text,
+            "description": user_name + " " + desp,
+            "url": user_login,
+            "btntxt": "更多"
+        },
+        "duplicate_check_interval": 600
     }
-    post_data = {
-        'text': text,
-        'desp': user_name + desp
-    }
-    requests.post(FT, params=post_data, headers=headers)
+    requests.post(send_msg_url, data=json.dumps(data))
 
 
 def check_conf(temp_conf):
-    conf_list = [reserve, user_login, lib, seat, seat_random, prems, ftkey, user]
+    conf_list = [reserve, user_login, lib, seat, seat_random, prems, token, app_id, user, user_id]
     conf_list.sort()
     temp_conf.sort()
     return conf_list == temp_conf
@@ -179,17 +190,18 @@ def get_args():
 
 
 def read_conf(conf):
-    global RUN, url_login_url, seat_dict, ran, preMs, FTkey, FT, user_name
+    global RUN, url_login_url, seat_dict, ran, preMs, user_name, touser, access_token, agentId
     user_name = conf.get(LIBRARY, user)
     RUN = conf.getboolean(LIBRARY, reserve)
     url_login_url = conf.get(LIBRARY, user_login)
     temp_lib_name = conf.get(LIBRARY, lib)
     temp_seat_list = conf.get(LIBRARY, seat).split(',')
     seat_dict[temp_lib_name] = temp_seat_list
-    ran = conf.get(LIBRARY, seat_random)
+    ran = conf.getboolean(LIBRARY, seat_random)
     preMs = conf.getfloat(LIBRARY, prems)
-    FTkey = conf.get(LIBRARY, ftkey)
-    FT = FT % FTkey
+    touser = conf.get(LIBRARY, user_id)
+    access_token = conf.get(LIBRARY, token)
+    agentId = conf.get(LIBRARY, app_id)
 
 
 def get_temp_seat(seat_dict, ran):
@@ -300,7 +312,6 @@ read_conf(conf)
 start_text = "脚本开始运行"
 start_desp = getTime() + "脚本开始运行"
 notify_wechat(start_text, start_desp)
-# print(RUN, url_login_url, seat_dict, ran, preMs, FTkey)
 select_seat_dict = init_seat_dict(seat_dict, ran)
 init_hex_dict()
 # 程序休眠到抢座开始的preMs时刻
