@@ -83,12 +83,12 @@ redis_port = 6379
 redis_db = 0
 redis_key = 'access_token'
 expire_key = 'expires_in'
-
+redis_conn = None
 # 状态
 res_code = 1
 moment = False
 selected = False
-
+REDIS_OPEN = True
 # 构建一个CookieJar对象实例来保存cookie
 cookiejar = http.cookiejar.CookieJar()
 handler = urllib.request.HTTPCookieProcessor(cookiejar)
@@ -171,16 +171,18 @@ def write_log(content):
         log_file.write(content)
 
 
-def get_token(corpid, corpsecret):
-    redis_conn = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
-    access_token = redis_conn.get(redis_key)
+def get_token():
+    access_token = None
+    if REDIS_OPEN:
+        access_token = redis_conn.get(redis_key)
     if not access_token:
         get_token_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}"
         response = requests.get(get_token_url).text
         response = json.loads(response)
         access_token = response.get(redis_key)
         expires_in = response.get(expire_key)
-        redis_conn.set(redis_key, access_token, nx=True, ex=expires_in)
+        if REDIS_OPEN:
+            redis_conn.set(redis_key, access_token, nx=True, ex=expires_in)
     if type(access_token) is bytes:
         access_token = str(access_token, encoding="utf-8")
     return access_token
@@ -188,7 +190,7 @@ def get_token(corpid, corpsecret):
 
 # 微信通知
 def notify_wechat(text, desp):
-    access_token = get_token(corpid, corpsecret)
+    access_token = get_token()
     if access_token and len(access_token) > 0:
         send_msg_url = f'https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}'
         data = {
@@ -252,6 +254,7 @@ def get_temp_seat(seat_dict, ran):
             seat_key = classroom[lib_name][lib_id][seat_num]
             seat_key_list.append(seat_key)
         temp_seat_dict[lib_id] = seat_key_list
+        print()
     return temp_seat_dict
 
 
@@ -329,6 +332,14 @@ def sleep_to_time():
 
 
 print("--------------begin reserve seat---------------")
+if REDIS_OPEN:
+    try:
+        redis_conn = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+        redis_conn.ping()
+    except Exception as e:
+        REDIS_OPEN = False
+        print(e)
+        print("未开启redis,不使用redis")
 conf = configparser.RawConfigParser()
 conf_path = get_args()
 # print(conf_path)

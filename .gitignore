@@ -2,5 +2,6 @@ conf/*
 log/
 !conf/default.ini
 get_classroom.py
+get_access_token.py
 test.py
 test.sh
