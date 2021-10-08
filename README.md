@@ -18,7 +18,8 @@
   | 抢座要不要随机 | seat_random=True               | True就每天随机,从自己的填的座位里面优先抢,理论上可以达到每天换着坐的目的,否则就否则 |
   | 抢座提前的秒数 | prems=0.1                      | 可以自己尝试改,不改也挺好用                                  |
   | 抢座通知配置   | appid=1                        | 企业微信的appid                                              |
-  | 抢座通知配置   | token=                         | 调用接口用的access_token                                     |
+  | 抢座通知配置   | company_id=                    | 公司id,用于获取access_token                                  |
+  | 抢座通知配置:  | company_secret=                | 应用secret,用于获取access_token                              |
 
 - 建立log目录用于存放日志
 

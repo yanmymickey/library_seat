@@ -6,6 +6,7 @@ import json
 import re
 import execjs
 import time
+import redis
 import requests
 import datetime
 import threading
@@ -28,7 +29,8 @@ from os import path, makedirs
     抢座提前的秒数:prems=0.1                  (可以自己尝试改,不改也挺好用) 
     抢座通知配置:user_id=                     (推送消息发送user_id)
     抢座通知配置:appid=1                      (企业微信的appid)
-    抢座通知配置:token=                       (调用接口用的access_token)
+    抢座通知配置:company_id=                  (公司id,用于获取access_token)
+    抢座通知配置:company_secret=              (应用secret,用于获取access_token)
 4.仅供学习和交流,禁止私自牟利
 建立log目录用于存放日志
 5.脚本运行是运行library.sh
@@ -46,12 +48,15 @@ seat_random = 'random'
 prems = 'prems'
 user = 'user'
 app_id = 'app_id'
-token = 'token'
 user_id = 'user_id'
+company_id = 'company_id'
+company_secret = 'company_secret'
+
 # 通知配置
 touser = "@all"
 agentId = None
-access_token = None
+corpid = None
+corpsecret = None
 # 抓湘大校园的包,提取链接类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=
 url_login_url = None
 # 要占座的座位列表
@@ -64,7 +69,7 @@ RUN = True
 ran = False
 # 用户名称
 user_name = 'test'
-# 通知的api接口
+
 # 默认的抢座列表
 default_seat = {"南204中文图书借阅一厅(2楼)": [1, 2, 3, 4, 5, 6, 7, 8]}
 # 抢座链接 根据lib_id YsjhY856两个参数确定座位
@@ -72,17 +77,27 @@ url_submit = 'http://wechat.v2.traceint.com/index.php/reserve/get/'
 # 带有生成参数的js文件链接的页面链接
 url_hex = "http://wechat.v2.traceint.com/index.php/reserve/layout/libid=%s.html"
 
+# redis 配置
+redis_host = '127.0.0.1'
+redis_port = 6379
+redis_db = 0
+redis_key = 'access_token'
+expire_key = 'expires_in'
+
 # 状态
 res_code = 1
 moment = False
 selected = False
+
 # 构建一个CookieJar对象实例来保存cookie
 cookiejar = http.cookiejar.CookieJar()
 handler = urllib.request.HTTPCookieProcessor(cookiejar)
 opener = urllib.request.build_opener(handler)
+
 # 保存线程的列表
 thread_id = 0
 thread_list = []
+
 # 保存hexcode
 hex_dict = {}
 select_seat_dict = {}
@@ -156,26 +171,43 @@ def write_log(content):
         log_file.write(content)
 
 
+def get_token(corpid, corpsecret):
+    redis_conn = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
+    access_token = redis_conn.get(redis_key)
+    if not access_token:
+        get_token_url = f"https://qyapi.weixin.qq.com/cgi-bin/gettoken?corpid={corpid}&corpsecret={corpsecret}"
+        response = requests.get(get_token_url).text
+        response = json.loads(response)
+        access_token = response.get(redis_key)
+        expires_in = response.get(expire_key)
+        redis_conn.set(redis_key, access_token, nx=True, ex=expires_in)
+    if type(access_token) is bytes:
+        access_token = str(access_token, encoding="utf-8")
+    return access_token
+
+
 # 微信通知
 def notify_wechat(text, desp):
-    send_msg_url = f'https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}'
-    data = {
-        "touser": touser,
-        "agentid": agentId,
-        "msgtype": "textcard",
-        "textcard": {
-            "title": user_name + " " + text,
-            "description": user_name + " " + desp,
-            "url": user_login,
-            "btntxt": "更多"
-        },
-        "duplicate_check_interval": 600
-    }
-    requests.post(send_msg_url, data=json.dumps(data))
+    access_token = get_token(corpid, corpsecret)
+    if access_token and len(access_token) > 0:
+        send_msg_url = f'https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}'
+        data = {
+            "touser": touser,
+            "agentid": agentId,
+            "msgtype": "textcard",
+            "textcard": {
+                "title": user_name + " " + text,
+                "description": user_name + " " + desp,
+                "url": user_login,
+                "btntxt": "更多"
+            },
+            "duplicate_check_interval": 600
+        }
+        requests.post(send_msg_url, data=json.dumps(data))
 
 
 def check_conf(temp_conf):
-    conf_list = [reserve, user_login, lib, seat, seat_random, prems, token, app_id, user, user_id]
+    conf_list = [reserve, user_login, lib, seat, seat_random, prems, company_id, company_secret, app_id, user, user_id]
     conf_list.sort()
     temp_conf.sort()
     return conf_list == temp_conf
@@ -190,7 +222,7 @@ def get_args():
 
 
 def read_conf(conf):
-    global RUN, url_login_url, seat_dict, ran, preMs, user_name, touser, access_token, agentId
+    global RUN, url_login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret
     user_name = conf.get(LIBRARY, user)
     RUN = conf.getboolean(LIBRARY, reserve)
     url_login_url = conf.get(LIBRARY, user_login)
@@ -200,8 +232,9 @@ def read_conf(conf):
     ran = conf.getboolean(LIBRARY, seat_random)
     preMs = conf.getfloat(LIBRARY, prems)
     touser = conf.get(LIBRARY, user_id)
-    access_token = conf.get(LIBRARY, token)
     agentId = conf.get(LIBRARY, app_id)
+    corpid = conf.get(LIBRARY, company_id)
+    corpsecret = conf.get(LIBRARY, company_secret)
 
 
 def get_temp_seat(seat_dict, ran):
