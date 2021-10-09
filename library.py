@@ -20,22 +20,22 @@ from os import path, makedirs
 1.不用改脚本，通过修改配置文件修改脚本参数
 2.配置文件在conf文件夹下面,文件名以ini结尾就行,其他随意
 3.参数说明：
-    配置文件头: [LIBRARY]                   必需,复制粘贴到第一行,下列参数顺序无所谓
-    是否抢座位: reserve=True                (True代表抢,否则就否则) 
-    用户登录url:user_login=http://.......   (抓xd校园的包,提取链接,类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=)
-    抢座的图书馆:lib=南204中文图书借阅一厅(2楼)  (查看xtulib.py中lib_name_dict的名称,复制粘贴,不要自己打)
-    抢座的位置:seat=1,2,3,4,5                (要占座的位置列表,随便写几个自己喜欢的) 
-    抢座要不要随机:seat_random=True           (True就每天随机,从自己的填的座位里面优先抢,理论上可以达到每天换着坐的目的,否则就否则) 
-    抢座提前的秒数:prems=0.1                  (可以自己尝试改,不改也挺好用) 
-    抢座通知配置:user_id=                     (推送消息发送user_id)
-    抢座通知配置:appid=1                      (企业微信的appid)
-    抢座通知配置:company_id=                  (公司id,用于获取access_token)
-    抢座通知配置:company_secret=              (应用secret,用于获取access_token)
+    配置文件头: [LIBRARY]                                               必需,复制粘贴到第一行,下列参数顺序无所谓
+    是否抢座位: reserve=True                                           (True代表抢,否则就否则) 
+    用户登录url:user_login=http://.......                              (抓xd校园的包,提取链接,类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=)
+    抢座的图书馆:lib=["南204中文图书借阅一厅(2楼)","南701外文图书借阅厅(7楼)"] (查看xtulib.py中lib_name_dict的名称,复制粘贴,不要自己打)
+    抢座的位置:seat=[[1,2,3,4,5],[1,2,3,4,5]]                          (要占座的位置列表,随便写几个自己喜欢的) 
+    抢座要不要随机:seat_random=True                                     (True就每天随机,从自己的填的座位里面优先抢,理论上可以达到每天换着坐的目的,否则就否则) 
+    抢座提前的秒数:prems=0.1                                            (可以自己尝试改,不改也挺好用) 
+    抢座通知配置:user_id=                                               (推送消息发送user_id)
+    抢座通知配置:appid=1                                                (企业微信的appid)
+    抢座通知配置:company_id=                                            (公司id,用于获取access_token)
+    抢座通知配置:company_secret=                                        (应用secret,用于获取access_token)
 4.仅供学习和交流,禁止私自牟利
-建立log目录用于存放日志
-5.脚本运行是运行library.sh
-6.配置一个每天7点20的crontab定时任务,挂服务器上就大功告成了
-7.考研人加油叭
+5.建立log目录用于存放日志
+6.脚本运行是运行library.sh
+7.配置一个每天7点20的crontab定时任务,挂服务器上就大功告成了
+8.考研人加油叭
 '''
 
 # 配置文件名称项
@@ -89,6 +89,7 @@ res_code = 1
 moment = False
 selected = False
 REDIS_OPEN = True
+isNotify = True
 # 构建一个CookieJar对象实例来保存cookie
 cookiejar = http.cookiejar.CookieJar()
 handler = urllib.request.HTTPCookieProcessor(cookiejar)
@@ -130,7 +131,7 @@ class seat_Thread(threading.Thread):
     # 抢座通知
     def notify_lib(self):
         text = '图书馆占座成功通知'
-        desp = getTime() + " " + self.lib_name + self.seat + "占座成功"
+        desp = getTime() + "\n地点: " + self.lib_name + "\n座位号: " + self.seat + "\n占座成功"
         notify_wechat(text, desp)
 
     # 抢座并通知
@@ -181,6 +182,7 @@ def get_token():
         response = json.loads(response)
         access_token = response.get(redis_key)
         expires_in = response.get(expire_key)
+        # print(access_token)
         if REDIS_OPEN:
             redis_conn.set(redis_key, access_token, nx=True, ex=expires_in)
     if type(access_token) is bytes:
@@ -190,6 +192,8 @@ def get_token():
 
 # 微信通知
 def notify_wechat(text, desp):
+    if not isNotify:
+        return
     access_token = get_token()
     if access_token and len(access_token) > 0:
         send_msg_url = f'https://qyapi.weixin.qq.com/cgi-bin/message/send?access_token={access_token}'
@@ -199,9 +203,9 @@ def notify_wechat(text, desp):
             "msgtype": "textcard",
             "textcard": {
                 "title": user_name + " " + text,
-                "description": user_name + " " + desp,
-                "url": user_login,
-                "btntxt": "更多"
+                "description": user_name + "\n" + desp,
+                "url": url_login_url,
+                "btntxt": "more"
             },
             "duplicate_check_interval": 600
         }
@@ -224,19 +228,25 @@ def get_args():
 
 
 def read_conf(conf):
-    global RUN, url_login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret
+    global RUN, url_login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret, isNotify
     user_name = conf.get(LIBRARY, user)
     RUN = conf.getboolean(LIBRARY, reserve)
     url_login_url = conf.get(LIBRARY, user_login)
-    temp_lib_name = conf.get(LIBRARY, lib)
-    temp_seat_list = conf.get(LIBRARY, seat).split(',')
-    seat_dict[temp_lib_name] = temp_seat_list
     ran = conf.getboolean(LIBRARY, seat_random)
     preMs = conf.getfloat(LIBRARY, prems)
     touser = conf.get(LIBRARY, user_id)
     agentId = conf.get(LIBRARY, app_id)
     corpid = conf.get(LIBRARY, company_id)
     corpsecret = conf.get(LIBRARY, company_secret)
+    if not corpid or not corpsecret or not app_id:
+        isNotify = False
+        print("没有提供完整的企业微信配置信息,将不会产生微信通知")
+    temp_lib_name_list = conf.get(LIBRARY, lib)
+    temp_seat_list = conf.get(LIBRARY, seat)
+    temp_lib_name_list = json.loads(temp_lib_name_list)
+    temp_seat_list = json.loads(temp_seat_list)
+    for temp_lib_name, temp_seat in zip(temp_lib_name_list, temp_seat_list):
+        seat_dict[temp_lib_name] = temp_seat
 
 
 def get_temp_seat(seat_dict, ran):
@@ -260,11 +270,19 @@ def get_temp_seat(seat_dict, ran):
 
 def init_seat_dict(seat_dict=None, ran=False):
     if not seat_dict:
-        print('--------------未选择座位,将使用默认座位-----------')
+        print('--------------未选择座位,将使用默认座位--------------')
         seat_dict = default_seat
-    print('--------本次选择座位列表---------')
+    print('--------------本次选择座位列表--------------')
     temp_seat_dict = get_temp_seat(seat_dict, ran)
     return temp_seat_dict
+
+
+def init_hex_dict():
+    for lib_id in select_seat_dict:
+        seat_dict = {}
+        for seat_key in select_seat_dict[lib_id]:
+            seat_dict[seat_key] = ""
+            hex_dict[lib_id] = seat_dict
 
 
 # 刷新hexCode
@@ -295,7 +313,7 @@ def fresh_hex(lib_id, seat_key):
 
 
 def getTime():
-    now_timeformat = '%Y-%m-%d %H:%M'
+    now_timeformat = '%Y-%m-%d %H:%M:%S'
     submit_time = datetime.datetime.now().strftime(now_timeformat)
     return submit_time
 
@@ -303,14 +321,6 @@ def getTime():
 # 以get方法访问登录链接，访问之后会自动保存cookie到cookiejar中
 def login():
     opener.open(url_login_url)
-
-
-def init_hex_dict():
-    for lib_id in select_seat_dict:
-        seat_dict = {}
-        for seat_key in select_seat_dict[lib_id]:
-            seat_dict[seat_key] = ""
-            hex_dict[lib_id] = seat_dict
 
 
 def sleep_to_time():
@@ -331,7 +341,7 @@ def sleep_to_time():
     time.sleep(60 - s - ms - preMs)
 
 
-print("--------------begin reserve seat---------------")
+print("--------------begin reserve seat--------------")
 if REDIS_OPEN:
     try:
         redis_conn = redis.Redis(host=redis_host, port=redis_port, db=redis_db)
@@ -342,17 +352,24 @@ if REDIS_OPEN:
         print("未开启redis,不使用redis")
 conf = configparser.RawConfigParser()
 conf_path = get_args()
-# print(conf_path)
 conf.read(conf_path, encoding='utf-8-sig')
 if LIBRARY not in conf.sections():
-    print('-------配置文件格式错误------')
+    print('--------------配置文件格式错误--------------')
     exit()
 conf_options_list = list(conf.options(LIBRARY))
 if not check_conf(conf_options_list):
-    print('-------配置文件格式错误------')
+    print('--------------配置文件格式错误--------------')
     exit()
 # 读取配置文件
-read_conf(conf)
+try:
+    read_conf(conf)
+except Exception as e:
+    print('--------------读取配置' + conf_path + '文件失败,配置文件格式错误--------------')
+    error_text = "脚本运行错误报告"
+    error_desp = getTime() + "读取配置" + conf_path + "文件失败,配置文件格式错误"
+    write_log(error_desp)
+    notify_wechat(error_text, error_desp)
+    exit(3)
 start_text = "脚本开始运行"
 start_desp = getTime() + "脚本开始运行"
 notify_wechat(start_text, start_desp)
@@ -363,8 +380,6 @@ init_hex_dict()
 sleep_to_time()
 start_time = time.time()
 count_empty_seat = 0
-# if not RUN:
-#     print(RUN)
 # RUN = False
 while RUN and not selected:
     end_time = time.time()
@@ -405,4 +420,4 @@ if res_code == 1:
     write_log(content)
     failure_text = "图书馆占座失败通知"
     notify_wechat(failure_text, content)
-print('--------------prepare for tomorrow---------------')
+print('--------------prepare for tomorrow--------------')
