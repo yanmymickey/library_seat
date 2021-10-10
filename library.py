@@ -116,11 +116,11 @@ class SeatThread(threading.Thread):
 
     def run(self):
         self.getlib()
-        print("当前工作的线程为：", self.thread_id, " 正在尝试: ", self.lib_name, " 座位号: ", self.seat, "\n", end='')
-        print("reserve_seat_start", "\n", end='')
+        print("--------------当前工作的线程为：", self.thread_id, " 正在尝试: ", self.lib_name, " 座位号: ", self.seat, "--------------\n", end='')
+        print("--------------reserve_seat_start--------------", "\n", end='')
         self.reserve_seat()
-        print("reserve_seat_end", "\n", end='')
-        print(self.thread_id, " 线程已退出\n", end='')
+        print("--------------reserve_seat_end--------------", "\n", end='')
+        print("--------------" + self.thread_id, " 线程已退出\n--------------", end='')
 
     def getlib(self):
         # 获取图书馆名称和座位号
@@ -240,7 +240,7 @@ def read_conf(temp_conf):
     corpsecret = temp_conf.get(LIBRARY, company_secret)
     if not corpid or not corpsecret or not app_id:
         isNotify = False
-        print("没有提供完整的企业微信配置信息,将不会产生微信通知")
+        print("--------------没有提供完整的企业微信配置信息,将不会产生微信通知--------------")
     temp_lib_name_list = temp_conf.get(LIBRARY, lib)
     temp_seat_list = temp_conf.get(LIBRARY, seat)
     temp_lib_name_list = json.loads(temp_lib_name_list)
@@ -354,7 +354,7 @@ if REDIS_OPEN:
     except Exception as e:
         REDIS_OPEN = False
         print(e)
-        print("未开启redis,不使用redis")
+        print("--------------未开启redis,不使用redis--------------")
 conf = configparser.RawConfigParser()
 conf_path = get_args()
 conf.read(conf_path, encoding='utf-8-sig')
