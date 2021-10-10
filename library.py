@@ -58,7 +58,7 @@ agentId = None
 corpid = None
 corpsecret = None
 # 抓湘大校园的包,提取链接类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=
-url_login_url = None
+login_url = ""
 # 要占座的座位列表
 seat_dict = {}
 # 提前多少秒开抢 支持三位小数
@@ -104,15 +104,15 @@ hex_dict = {}
 select_seat_dict = {}
 
 
-class seat_Thread(threading.Thread):
-    def __init__(self, thread_id, lib_id, seat_key, hexCode):
+class SeatThread(threading.Thread):
+    def __init__(self, temp_thread_id, temp_lib_id, temp_seat_key, temp_hex_code):
         threading.Thread.__init__(self)
-        self.thread_id = thread_id
-        self.lib_id = lib_id
-        self.seat_key = seat_key
+        self.thread_id = temp_thread_id
+        self.lib_id = temp_lib_id
+        self.seat_key = temp_seat_key
         self.lib_name = ""
         self.seat = ""
-        self.hexCode = hexCode
+        self.hexCode = temp_hex_code
 
     def run(self):
         self.getlib()
@@ -124,14 +124,14 @@ class seat_Thread(threading.Thread):
 
     def getlib(self):
         # 获取图书馆名称和座位号
-        lib = library[self.lib_id]
-        self.lib_name = str(list(lib.keys())[0])
-        self.seat = str(lib[self.lib_name][self.seat_key])
+        temp_lib = library[self.lib_id]
+        self.lib_name = str(list(temp_lib.keys())[0])
+        self.seat = str(temp_lib[self.lib_name][self.seat_key])
 
     # 抢座通知
     def notify_lib(self):
         text = '图书馆占座成功通知'
-        desp = getTime() + "\n地点: " + self.lib_name + "\n座位号: " + self.seat + "\n占座成功"
+        desp = get_time() + "\n地点: " + self.lib_name + "\n座位号: " + self.seat + "\n占座成功"
         notify_wechat(text, desp)
 
     # 抢座并通知
@@ -147,8 +147,8 @@ class seat_Thread(threading.Thread):
             RUN = False
             res_code = 0
             # 写入日志
-            content = getTime() + " " + self.lib_name + self.seat + "占座成功\n"
-            write_log(content)
+            temp_content = get_time() + " " + self.lib_name + self.seat + "占座成功\n"
+            write_log(temp_content)
             # 通知
             self.notify_lib()
         elif res['code'] == 1 and res['msg'] == '参数不正确':
@@ -162,14 +162,14 @@ class seat_Thread(threading.Thread):
                 select_seat_dict[self.lib_id].remove(self.seat_key)
 
 
-def write_log(content):
+def write_log(temp_content):
     # 创建图片和日志路径
     log_path = 'log/'
     if not path.exists(log_path):
         makedirs(log_path)
     with open(log_path + 'library.log', 'a+', encoding='utf-8') as log_file:
         log_file.seek(0, 0)
-        log_file.write(content)
+        log_file.write(temp_content)
 
 
 def get_token():
@@ -204,7 +204,7 @@ def notify_wechat(text, desp):
             "textcard": {
                 "title": user_name + " " + text,
                 "description": user_name + "\n" + desp,
-                "url": url_login_url,
+                "url": login_url,
                 "btntxt": "more"
             },
             "duplicate_check_interval": 600
@@ -223,44 +223,44 @@ def get_args():
     parser = argparse.ArgumentParser(description='Test for argparse')
     parser.add_argument('--conf', '-c', help='用户文件配置文件路径,必要参数', required=True)
     args = parser.parse_args()
-    conf_path = args.conf
-    return conf_path
+    temp_conf_path = args.conf
+    return temp_conf_path
 
 
-def read_conf(conf):
-    global RUN, url_login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret, isNotify
-    user_name = conf.get(LIBRARY, user)
-    RUN = conf.getboolean(LIBRARY, reserve)
-    url_login_url = conf.get(LIBRARY, user_login)
-    ran = conf.getboolean(LIBRARY, seat_random)
-    preMs = conf.getfloat(LIBRARY, prems)
-    touser = conf.get(LIBRARY, user_id)
-    agentId = conf.get(LIBRARY, app_id)
-    corpid = conf.get(LIBRARY, company_id)
-    corpsecret = conf.get(LIBRARY, company_secret)
+def read_conf(temp_conf):
+    global RUN, login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret, isNotify
+    user_name = temp_conf.get(LIBRARY, user)
+    RUN = temp_conf.getboolean(LIBRARY, reserve)
+    login_url = temp_conf.get(LIBRARY, user_login)
+    ran = temp_conf.getboolean(LIBRARY, seat_random)
+    preMs = temp_conf.getfloat(LIBRARY, prems)
+    touser = temp_conf.get(LIBRARY, user_id)
+    agentId = temp_conf.get(LIBRARY, app_id)
+    corpid = temp_conf.get(LIBRARY, company_id)
+    corpsecret = temp_conf.get(LIBRARY, company_secret)
     if not corpid or not corpsecret or not app_id:
         isNotify = False
         print("没有提供完整的企业微信配置信息,将不会产生微信通知")
-    temp_lib_name_list = conf.get(LIBRARY, lib)
-    temp_seat_list = conf.get(LIBRARY, seat)
+    temp_lib_name_list = temp_conf.get(LIBRARY, lib)
+    temp_seat_list = temp_conf.get(LIBRARY, seat)
     temp_lib_name_list = json.loads(temp_lib_name_list)
     temp_seat_list = json.loads(temp_seat_list)
     for temp_lib_name, temp_seat in zip(temp_lib_name_list, temp_seat_list):
         seat_dict[temp_lib_name] = temp_seat
 
 
-def get_temp_seat(seat_dict, ran):
+def get_temp_seat(input_seat_dict, input_ran):
     temp_seat_dict = {}
-    lib_name_list = list(seat_dict.keys())
-    if ran:
+    lib_name_list = list(input_seat_dict.keys())
+    if input_ran:
         random.shuffle(lib_name_list)
     for lib_name in lib_name_list:
         print(lib_name, " 座位号: ", end='')
         temp_lib = classroom[lib_name]
         temp_lib_id = str(list(temp_lib.keys())[0])
         seat_key_list = []
-        seat_list = seat_dict[lib_name]
-        if ran:
+        seat_list = input_seat_dict[lib_name]
+        if input_ran:
             random.shuffle(seat_list)
         for seat_num in seat_list:
             seat_num = str(seat_num)
@@ -272,29 +272,29 @@ def get_temp_seat(seat_dict, ran):
     return temp_seat_dict
 
 
-def init_seat_dict(seat_dict=None, ran=False):
-    if not seat_dict:
+def init_seat_dict(input_seat_dict=None, input_ran=False):
+    if not input_seat_dict:
         print('--------------未选择座位,将使用默认座位--------------')
-        seat_dict = default_seat
+        input_seat_dict = default_seat
     print('--------------本次选择座位列表--------------')
-    temp_seat_dict = get_temp_seat(seat_dict, ran)
+    temp_seat_dict = get_temp_seat(input_seat_dict, input_ran)
     return temp_seat_dict
 
 
 def init_hex_dict():
-    for lib_id in select_seat_dict:
-        seat_dict = {}
-        for seat_key in select_seat_dict[lib_id]:
-            seat_dict[seat_key] = ""
-            hex_dict[lib_id] = seat_dict
+    for temp_lib_id in select_seat_dict:
+        temp_seat_dict = {}
+        for temp_seat_key in select_seat_dict[temp_lib_id]:
+            temp_seat_dict[temp_seat_key] = ""
+            hex_dict[temp_lib_id] = temp_seat_dict
 
 
 # 刷新hexCode
-def fresh_hex(lib_id, seat_key):
+def fresh_hex(temp_lib_id, temp_seat_key):
     global selected
     js_url = []
     while not js_url:
-        url_hex_lib = url_hex % lib_id
+        url_hex_lib = url_hex % temp_lib_id
         res = opener.open(url_hex_lib).read().decode('utf-8')
         if '签到' in res:
             selected = True
@@ -312,11 +312,11 @@ def fresh_hex(lib_id, seat_key):
     js = js.replace("msg)})};", "*/")
     # 执行选座函数获取选座参数
     js_obj = execjs.compile(js)
-    hexCode = js_obj.call("reserve_seat", lib_id, seat_key)
-    hex_dict[lib_id][seat_key] = hexCode
+    temp_hex_code = js_obj.call("reserve_seat", temp_lib_id, temp_seat_key)
+    hex_dict[temp_lib_id][temp_seat_key] = temp_hex_code
 
 
-def getTime():
+def get_time():
     now_timeformat = '%Y-%m-%d %H:%M:%S'
     submit_time = datetime.datetime.now().strftime(now_timeformat)
     return submit_time
@@ -324,7 +324,8 @@ def getTime():
 
 # 以get方法访问登录链接，访问之后会自动保存cookie到cookiejar中
 def login():
-    opener.open(url_login_url)
+    if login_url != "":
+        opener.open(login_url)
 
 
 def sleep_to_time():
@@ -370,12 +371,12 @@ try:
 except Exception as e:
     print('--------------读取配置' + conf_path + '文件失败,配置文件格式错误--------------')
     error_text = "脚本运行错误报告"
-    error_desp = getTime() + "读取配置" + conf_path + "文件失败,配置文件格式错误"
+    error_desp = get_time() + "读取配置" + conf_path + "文件失败,配置文件格式错误"
     write_log(error_desp)
     notify_wechat(error_text, error_desp)
     exit(3)
 start_text = "脚本开始运行"
-start_desp = getTime() + "脚本开始运行"
+start_desp = get_time() + "脚本开始运行"
 notify_wechat(start_text, start_desp)
 select_seat_dict = init_seat_dict(seat_dict, ran)
 init_hex_dict()
@@ -401,7 +402,7 @@ while RUN and not selected:
                     fresh_hex(lib_id, seat_key)
                 if not selected:
                     hexCode = hex_dict[lib_id][seat_key]
-                    mythread = seat_Thread(thread_id, lib_id, seat_key, hexCode)
+                    mythread = SeatThread(thread_id, lib_id, seat_key, hexCode)
                     mythread.start()
                     thread_list.append(mythread)
                     thread_id += 1
@@ -413,7 +414,7 @@ for t in thread_list:
     t.join()
 if res_code == 1:
     res_code = 0
-    nowtime = getTime()
+    nowtime = get_time()
     content = None
     if selected:
         content = nowtime + "占座失败,已占座\n"
