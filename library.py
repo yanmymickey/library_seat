@@ -57,7 +57,7 @@ touser = "@all"
 agentId = None
 corpid = None
 corpsecret = None
-# 抓湘大校园的包,提取链接类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=
+# 抓xd校园的包,提取链接类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=
 login_url = ""
 # 要占座的座位列表
 seat_dict = {}
