@@ -251,19 +251,23 @@ def read_conf(conf):
 
 def get_temp_seat(seat_dict, ran):
     temp_seat_dict = {}
-    for lib_name, seat_list in seat_dict.items():
+    lib_name_list = list(seat_dict.keys())
+    if ran:
+        random.shuffle(lib_name_list)
+    for lib_name in lib_name_list:
         print(lib_name, " 座位号: ", end='')
-        lib = classroom[lib_name]
-        lib_id = str(list(lib.keys())[0])
+        temp_lib = classroom[lib_name]
+        temp_lib_id = str(list(temp_lib.keys())[0])
         seat_key_list = []
+        seat_list = seat_dict[lib_name]
         if ran:
             random.shuffle(seat_list)
         for seat_num in seat_list:
             seat_num = str(seat_num)
             print(seat_num, " ", end='')
-            seat_key = classroom[lib_name][lib_id][seat_num]
-            seat_key_list.append(seat_key)
-        temp_seat_dict[lib_id] = seat_key_list
+            temp_seat_key = classroom[lib_name][temp_lib_id][seat_num]
+            seat_key_list.append(temp_seat_key)
+        temp_seat_dict[temp_lib_id] = seat_key_list
         print()
     return temp_seat_dict
 
