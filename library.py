@@ -237,6 +237,8 @@ except Exception as e:
     write_log(error_desp)
     notify_wechat(error_text, error_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
     exit(3)
+if not RUN:
+    exit()
 start_text = "脚本开始运行"
 start_desp = get_time() + "占座脚本开始运行"
 notify_wechat(start_text, start_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)

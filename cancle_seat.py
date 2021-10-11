@@ -9,7 +9,7 @@ res_code = 1
 moment = False
 selected = False
 REDIS_OPEN = True
-isNotify = False
+isNotify = True
 
 
 # 微信通知
@@ -132,6 +132,7 @@ if login_url != "":
         if "本次学习时长" in cancel_seat_html:
             cancel_text = "退座成功通知"
             cancel_desp = get_time() + "退座成功"
+            print(cancel_desp)
             write_log(cancel_desp)
             notify_wechat(cancel_text, cancel_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
         elif "您还没有预定座位" in cancel_seat_html:
@@ -149,3 +150,4 @@ if login_url != "":
         error_desp = get_time() + "token==None退坐失败"
         write_log(error_desp)
         notify_wechat(error_text, error_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
+print('--------------prepare for tomorrow--------------')
