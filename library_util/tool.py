@@ -4,9 +4,10 @@ import json
 from os import path, makedirs
 import random
 import requests
-from xtulib import classroom
+from library_util.xtulib import classroom
 import http.cookiejar
 import urllib.request
+import urllib.parse
 
 # 配置文件名称项
 LIBRARY = 'LIBRARY'

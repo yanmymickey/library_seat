@@ -5,8 +5,8 @@ import threading
 import time
 import execjs
 import redis
-from util.tool import *
-from util.xtulib import library
+from library_util.tool import *
+from library_util.xtulib import library
 
 '''
 使用说明：
@@ -238,7 +238,7 @@ except Exception as e:
     notify_wechat(error_text, error_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
     exit(3)
 start_text = "脚本开始运行"
-start_desp = get_time() + "脚本开始运行"
+start_desp = get_time() + "占座脚本开始运行"
 notify_wechat(start_text, start_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
 select_seat_dict = init_seat_dict(seat_dict, ran)
 init_hex_dict()
