@@ -197,7 +197,7 @@ def sleep_to_time():
     m = int(datetime.datetime.now().strftime('%M'))
     # 秒
     s = int(datetime.datetime.now().strftime('%S'))
-    if m < 29 and h == 7:
+    if m < 29 and (h == 7 or h == 6):
         time.sleep(60 * 29 - 60 * m - s)
     login()
     s = int(datetime.datetime.now().strftime('%S'))

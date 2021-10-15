@@ -1,7 +1,9 @@
 conf/*
+conf_z/*
 log/
 !conf/default.ini
 library_util/get_classroom.py
 library_util/get_access_token.py
 test.py
 test.sh
+library_z.sh
