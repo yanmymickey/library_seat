@@ -129,7 +129,7 @@ if login_url != "":
     token = get_cancel_token()
     if token is not None:
         cancel_seat_html = cancel_seat(token)
-        if "本次学习时长" in cancel_seat_html:
+        if "本次学习时长" in cancel_seat_html or '主动退座成功' in cancel_seat_html:
             cancel_text = "退座成功通知"
             cancel_desp = get_time() + "退座成功"
             print(cancel_desp)

@@ -60,9 +60,7 @@ class SeatThread(threading.Thread):
     def run(self):
         self.getlib()
         print("当前工作的线程为：", self.thread_id, " 正在尝试: ", self.lib_name, " 座位号: ", self.seat, "\n", end='')
-        print("--------------reserve_seat_start--------------", "\n", end='')
         self.reserve_seat()
-        print("--------------reserve_seat_end--------------", "\n", end='')
         print("--------------", self.thread_id, " 线程已退出--------------\n", end='')
 
     def getlib(self):
@@ -82,10 +80,11 @@ class SeatThread(threading.Thread):
         global RUN, res_code, moment, selected, select_seat_dict
         if not RUN:
             return
+        print(url_submit + self.hexCode)
         res_html = opener.open(url_submit + self.hexCode).read().decode('utf-8')
         # print(url_submit + self.hexCode)
         res = json.loads(res_html)
-        print(res, "\n", end='')
+        print(self.lib_name + self.seat, res, "\n", end='')
         if res['code'] == 0:
             RUN = False
             res_code = 0
@@ -262,6 +261,9 @@ while RUN and not selected:
                 break
             if not select_seat_dict[lib_id]:
                 count_empty_seat += 1
+                if count_empty_seat == len(select_seat_dict.keys()):
+                    RUN = False
+                    print("设置False")
                 continue
             for seat_key in select_seat_dict[lib_id]:
                 if hex_dict[lib_id][seat_key] == "":
