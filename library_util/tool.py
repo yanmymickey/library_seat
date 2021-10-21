@@ -22,7 +22,7 @@ app_id = 'app_id'
 user_id = 'user_id'
 company_id = 'company_id'
 company_secret = 'company_secret'
-
+day = 'day'
 # 通知配置
 touser = "@all"
 agentId = None
@@ -40,8 +40,7 @@ RUN = True
 ran = False
 # 用户名称
 user_name = 'test'
-
-
+day_list = []
 
 # redis 配置
 redis_host = '127.0.0.1'
@@ -93,7 +92,7 @@ def get_token(REDIS_OPEN, temp_redis_conn, temp_corpid, temp_corpsecret):
 
 
 def check_conf(temp_conf):
-    conf_list = [reserve, user_login, lib, seat, seat_random, prems, company_id, company_secret, app_id, user, user_id]
+    conf_list = [reserve, user_login, lib, seat, seat_random, prems, company_id, company_secret, app_id, user, user_id,day]
     conf_list.sort()
     temp_conf.sort()
     return conf_list == temp_conf
@@ -143,6 +142,3 @@ def get_time():
     now_timeformat = '%Y-%m-%d %H:%M:%S'
     submit_time = datetime.datetime.now().strftime(now_timeformat)
     return submit_time
-
-
-

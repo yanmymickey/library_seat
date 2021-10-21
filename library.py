@@ -18,6 +18,7 @@ from library_util.xtulib import library
     用户登录url:user_login=http://.......                              (抓xd校园的包,提取链接,类似http://wechat.v2.traceint.com/index.php/schoolpushh5/registerLogin?sch_id=)
     抢座的图书馆:lib=["南204中文图书借阅一厅(2楼)","南701外文图书借阅厅(7楼)"] (查看xtulib.py中lib_name_dict的名称,复制粘贴,不要自己打)
     抢座的位置:seat=[[1,2,3,4,5],[1,2,3,4,5]]                          (要占座的位置列表,随便写几个自己喜欢的) 
+    抢座的天:day=[1,2,3]                                              (要占座的天,1-7表示星期一到星期天,[]表示每天)
     抢座要不要随机:seat_random=True                                     (True就每天随机,从自己的填的座位里面优先抢,理论上可以达到每天换着坐的目的,否则就否则) 
     抢座提前的秒数:prems=0.1                                            (可以自己尝试改,不改也挺好用) 
     抢座通知配置:user_id=                                               (推送消息发送user_id)
@@ -127,7 +128,7 @@ def notify_wechat(text, desp, temp_REDIS_OPEN, temp_redis_conn, temp_corpid, tem
 
 
 def read_conf(temp_conf):
-    global RUN, login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret, isNotify
+    global RUN, login_url, seat_dict, ran, preMs, user_name, touser, agentId, corpid, corpsecret, isNotify, day_list
     user_name = temp_conf.get(LIBRARY, user)
     RUN = temp_conf.getboolean(LIBRARY, reserve)
     login_url = temp_conf.get(LIBRARY, user_login)
@@ -137,6 +138,14 @@ def read_conf(temp_conf):
     agentId = temp_conf.get(LIBRARY, app_id)
     corpid = temp_conf.get(LIBRARY, company_id)
     corpsecret = temp_conf.get(LIBRARY, company_secret)
+    today = datetime.datetime.now().isoweekday()
+    day_list = temp_conf.get(LIBRARY, day)
+    day_list = list(json.loads(day_list))
+    if not day_list:
+        for i in range(1, 8):
+            day_list.append(i)
+    if today not in day_list:
+        RUN = False
     if not corpid or not corpsecret or not agentId:
         isNotify = False
         print("--------------没有提供完整的企业微信配置信息,将不会产生微信通知--------------")
