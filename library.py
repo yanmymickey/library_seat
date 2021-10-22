@@ -38,7 +38,7 @@ moment = False
 selected = False
 REDIS_OPEN = True
 isNotify = True
-
+black = False
 # 保存线程的列表
 thread_id = 0
 thread_list = []
@@ -78,7 +78,7 @@ class SeatThread(threading.Thread):
 
     # 抢座并通知
     def reserve_seat(self):
-        global RUN, res_code, moment, selected, select_seat_dict
+        global RUN, res_code, moment, selected, select_seat_dict, black
         if not RUN:
             return
         print(url_submit + self.hexCode)
@@ -103,6 +103,8 @@ class SeatThread(threading.Thread):
         elif res['code'] == 1 and res['msg'] == '该座位已经被人预定了!':
             if self.seat_key in select_seat_dict[self.lib_id]:
                 select_seat_dict[self.lib_id].remove(self.seat_key)
+        elif res['code'] == 1 and res['msg'] == '黑名单用户无法操作':
+            black = True
 
 
 # 微信通知
@@ -260,7 +262,7 @@ sleep_to_time()
 start_time = time.time()
 count_empty_seat = 0
 # RUN = False
-while RUN and not selected:
+while RUN and not selected and not black:
     end_time = time.time()
     if end_time - start_time < 180:
         if moment:
@@ -297,6 +299,8 @@ if res_code == 1:
         content = nowtime + "占座失败,已占座\n"
     elif count_empty_seat == len(select_seat_dict.keys()):
         content = nowtime + "占座失败,选的所有位置都被抢了\n"
+    elif black:
+        content = nowtime + "用户进入黑名单,占座失败\n"
     else:
         content = nowtime + "占座失败\n"
     write_log(content)
