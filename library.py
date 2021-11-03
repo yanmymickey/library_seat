@@ -85,7 +85,7 @@ class SeatThread(threading.Thread):
         res_html = opener.open(url_submit + self.hexCode).read().decode('utf-8')
         # print(url_submit + self.hexCode)
         res = json.loads(res_html)
-        print(self.lib_name + self.seat, res, "\n", end='')
+        print(get_time(), self.lib_name + self.seat, res, "\n", end='')
         if res['code'] == 0:
             RUN = False
             res_code = 0

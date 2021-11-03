@@ -122,7 +122,7 @@ except Exception as e:
     exit(3)
 start_text = "脚本开始运行"
 start_desp = get_time() + "退坐脚本开始运行"
-notify_wechat(start_text, start_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
+# notify_wechat(start_text, start_desp, REDIS_OPEN, redis_conn, corpid, corpsecret)
 
 if login_url != "":
     index_html = login()
